@@ -1,30 +1,101 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { Db } from 'mongodb';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import { Db, ObjectId } from 'mongodb';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
+  private readonly USERS_COLLECTION = 'users';
+
   constructor(@Inject('MONGO_DB') private readonly db: Db) {}
 
-  create(createUserDto: CreateUserDto) {
-    console.log(createUserDto);
-    return 'This action adds a new user';
+  async create(createUserDto: CreateUserDto, ip: string) {
+    const { email } = createUserDto;
+
+    // check in db if the user already exists
+    const userExists = await this.db.collection(this.USERS_COLLECTION).findOne({
+      email,
+    });
+
+    // if user exists
+    if (userExists) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const newUser = await this.db.collection(this.USERS_COLLECTION).insertOne({
+      email,
+      ip,
+      createdAt: new Date(),
+    });
+
+    if (newUser.acknowledged) {
+      return { ok: true, _id: newUser.insertedId };
+    }
+
+    throw new ConflictException('Unable to create a user');
   }
 
   async findAll() {
-    return await this.db.collection('users').find().toArray();
+    return await this.db.collection(this.USERS_COLLECTION).find().toArray();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOne(id: string) {
+    return await this.db.collection(this.USERS_COLLECTION).findOne({
+      _id: new ObjectId(id),
+    });
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    try {
+      const updatedDoc = await this.db
+        .collection(this.USERS_COLLECTION)
+        .findOneAndUpdate(
+          { _id: new ObjectId(id) },
+          { $set: { ...updateUserDto } },
+          { returnDocument: 'after' },
+        );
+
+      if (updatedDoc) {
+        return { ok: true };
+      }
+
+      return { ok: false };
+    } catch (error) {
+      throw new UnprocessableEntityException('Unable to update user', {
+        cause: error,
+        description: error.message,
+      });
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: string) {
+    try {
+      const deleteResult = await this.db
+        .collection(this.USERS_COLLECTION)
+        .deleteOne({
+          _id: new ObjectId(id),
+        });
+
+      if (deleteResult.deletedCount) {
+        return { ok: true };
+      }
+
+      return { ok: false };
+    } catch (error) {
+      throw new UnprocessableEntityException('Unable to delete user', {
+        cause: error,
+        description: error.message,
+      });
+    }
   }
 }
+
+// Docs
+
+// mongodb
+// |-(findOneAndUpdate()) https://www.mongodb.com/docs/manual/reference/method/db.collection.findOneAndUpdate/

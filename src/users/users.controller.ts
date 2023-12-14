@@ -3,11 +3,12 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  Ip,
   Param,
   Patch,
   Post,
 } from '@nestjs/common';
-import { FindOneParams } from './dto/check';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
@@ -17,8 +18,9 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  @HttpCode(201)
+  create(@Body() createUserDto: CreateUserDto, @Ip() ip: string) {
+    return this.usersService.create(createUserDto, ip);
   }
 
   @Get()
@@ -27,17 +29,23 @@ export class UsersController {
   }
 
   @Get(':id')
-  findOne(@Param() params: FindOneParams) {
-    return this.usersService.findOne(params.id);
+  findOne(@Param('id') id: string) {
+    // TODO: should add param validation
+    return this.usersService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+    return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+    return this.usersService.remove(id);
   }
 }
+
+// Docs
+
+// nestjs
+// |-(controllers) https://docs.nestjs.com/controllers
