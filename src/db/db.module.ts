@@ -1,5 +1,7 @@
 import { Global, Module } from '@nestjs/common';
-import { MongoClient } from 'mongodb';
+import { Db, MongoClient } from 'mongodb';
+
+let cachedDb: Db | null = null;
 
 @Global()
 @Module({
@@ -7,11 +9,21 @@ import { MongoClient } from 'mongodb';
     {
       provide: 'MONGO_DB',
       useFactory: async () => {
+        if (process.env.NODE_ENV === 'development' && cachedDb) {
+          return cachedDb;
+        }
+
         const client = new MongoClient(process.env.DATABASE_URI, {
           monitorCommands: true,
         });
         await client.connect();
-        return client.db(process.env.DATABASE_NAME);
+        const db = client.db(process.env.DATABASE_NAME);
+
+        if (process.env.NODE_ENV === 'development') {
+          cachedDb = db;
+        }
+
+        return db;
       },
     },
   ],
