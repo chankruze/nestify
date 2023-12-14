@@ -11,10 +11,22 @@ async function bootstrap() {
     AppModule,
     new FastifyAdapter({ logger: true }),
   );
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, //  filter out properties that should not be received by the method handler
+      transform: true, // transform payloads to be objects typed according to their DTO classes
+    }),
+  );
   await app.listen(3000, '0.0.0.0'); // specify '0.0.0.0' in the listen() for all hosts
 }
+
 bootstrap();
 
-// https://docs.nestjs.com/techniques/performance
-// https://fastify.dev/docs/latest/Reference/Middleware/
+// Docs //
+
+// (ValidationPipe)
+// |-(stripping properties): https://docs.nestjs.com/techniques/validation#stripping-properties
+// |-(transform payloads): https://docs.nestjs.com/techniques/validation#transform-payload-objects
+
+// (fastify): https://docs.nestjs.com/techniques/performance
+// |-(middlewares) https://fastify.dev/docs/latest/Reference/Middleware/

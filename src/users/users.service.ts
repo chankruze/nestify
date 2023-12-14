@@ -8,6 +8,7 @@ export class UsersService {
   constructor(@Inject('MONGO_DB') private readonly db: Db) {}
 
   create(createUserDto: CreateUserDto) {
+    console.log(createUserDto);
     return 'This action adds a new user';
   }
 
