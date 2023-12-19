@@ -4,6 +4,7 @@ import {
   Injectable,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
 import { Db, ObjectId } from 'mongodb';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -27,8 +28,12 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
+    const passwordHash = await bcrypt.hash(createUserDto.password, 12);
+
     const newUser = await this.db.collection(this.USERS_COLLECTION).insertOne({
+      name: createUserDto.name,
       email,
+      password: passwordHash,
       ip,
       createdAt: new Date(),
     });
@@ -47,6 +52,12 @@ export class UsersService {
   async findOne(id: string) {
     return await this.db.collection(this.USERS_COLLECTION).findOne({
       _id: new ObjectId(id),
+    });
+  }
+
+  async findByEmail(email: string) {
+    return await this.db.collection(this.USERS_COLLECTION).findOne({
+      email,
     });
   }
 
